@@ -1,0 +1,1306 @@
+// import React, { useState } from 'react';
+// import { View, Text, TouchableOpacity, Image, StyleSheet, ActivityIndicator, Switch, FlatList, Alert } from 'react-native';
+// import * as ImagePicker from 'expo-image-picker';
+// import * as ImageManipulator from 'expo-image-manipulator';
+// import AWS from 'aws-sdk';
+
+// const UploadScreen = ({ username = 'defaultUser' }) => {
+//   const [mediaFiles, setMediaFiles] = useState([]);
+//   const [uploading, setUploading] = useState(false);
+//   const [uploadStatus, setUploadStatus] = useState('');
+//   const [compress, setCompress] = useState(false);
+
+//   // Configure AWS S3 with Filebase credentials
+//   const s3 = new AWS.S3({
+//     endpoint: 'https://s3.filebase.com',
+//     accessKeyId: '9EE2D0F61402062F4411',
+//     secretAccessKey: 'nrfgTvGjAeti5Fvnu77UNl0ko6blbSjHuexnWpRo',
+//     region: 'us-east-1',
+//     signatureVersion: 'v4',
+//   });
+
+//   const pickMedia = async () => {
+//     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+//     if (status !== 'granted') {
+//       alert('Permission to access media is required!');
+//       return;
+//     }
+
+//     let result = await ImagePicker.launchImageLibraryAsync({
+//       mediaTypes: ImagePicker.MediaTypeOptions.All,
+//       allowsMultipleSelection: true, // Enable multiple selection
+//       quality: 1,
+//     });
+
+//     if (!result.canceled) {
+//       const selectedMedia = result.assets.map(asset => ({
+//         uri: asset.uri,
+//         type: asset.type === 'video' ? 'video/mp4' : 'image/jpeg',
+//         fileName: asset.fileName || `media_${Date.now()}`,
+//       }));
+//       setMediaFiles(selectedMedia);
+//     }
+//   };
+
+//   const compressImage = async (uri) => {
+//     const manipulatedImage = await ImageManipulator.manipulateAsync(
+//       uri,
+//       [],
+//       { compress: 0.5, format: ImageManipulator.SaveFormat.JPEG }
+//     );
+//     return manipulatedImage.uri;
+//   };
+
+//   const uploadMediaFile = async (file) => {
+//     let fileUri = file.uri;
+
+//     // Compress the image if the user chooses to
+//     if (compress && file.type.startsWith('image')) {
+//       fileUri = await compressImage(file.uri);
+//       Alert.alert('Image compressed', 'The image was compressed successfully.');
+//     }
+
+//     // Fetch the media file as a blob
+//     const response = await fetch(fileUri);
+//     const blob = await response.blob();
+
+//     // Specify the folder based on the username
+//     const folderPath = `${username}/eventkick/`; // This is the folder path in S3/Filebase
+//     const params = {
+//       Bucket: 'eventkick',
+//       Key: `${folderPath}${file.fileName}`, // Uploading to the specified folder
+//       Body: blob,
+//       ContentType: file.type,
+//     };
+
+//     return s3.upload(params).promise();
+//   };
+
+//   const uploadToFilebase = async () => {
+//     if (mediaFiles.length === 0) return;
+
+//     setUploading(true);
+//     setUploadStatus('Uploading...');
+
+//     try {
+//       for (let i = 0; i < mediaFiles.length; i++) {
+//         const media = mediaFiles[i];
+//         await uploadMediaFile(media);
+//         setUploadStatus(`Uploaded ${i + 1} of ${mediaFiles.length}`);
+//       }
+//       setUploadStatus('All files uploaded successfully!');
+//     } catch (error) {
+//       setUploadStatus('Upload failed. Try again.');
+//       console.error('Error uploading to Filebase: ', error);
+//     } finally {
+//       setUploading(false);
+//     }
+//   };
+
+//   const renderMediaItem = ({ item }) => {
+//     return item.type.includes('video') ? (
+//       <Text style={styles.mediaText}>Video: {item.fileName}</Text>
+//     ) : (
+//       <Image source={{ uri: item.uri }} style={styles.mediaImage} />
+//     );
+//   };
+
+//   return (
+//     <View style={styles.container}>
+//       <Text style={styles.title}>Upload Media</Text>
+
+//       <View style={styles.mediaPreview}>
+//         {mediaFiles.length > 0 ? (
+//           <FlatList
+//             data={mediaFiles}
+//             keyExtractor={(item) => item.uri}
+//             renderItem={renderMediaItem}
+//             horizontal={true}
+//           />
+//         ) : (
+//           <Text style={styles.mediaText}>No media selected</Text>
+//         )}
+//       </View>
+
+//       <TouchableOpacity style={styles.button} onPress={pickMedia}>
+//         <Text style={styles.buttonText}>Choose Media</Text>
+//       </TouchableOpacity>
+
+//       {/* Compression Toggle */}
+//       <View style={styles.switchContainer}>
+//         <Text style={styles.switchText}>Compress Image</Text>
+//         <Switch value={compress} onValueChange={setCompress} />
+//       </View>
+
+//       {compress && mediaFiles.some(file => file.type.startsWith('video')) && (
+//         <Text style={styles.warning}>
+//           Compression not available for videos. Videos will be uploaded as-is.
+//         </Text>
+//       )}
+
+//       <TouchableOpacity
+//         style={[styles.button, { backgroundColor: '#4caf50' }]}
+//         onPress={uploadToFilebase}
+//         disabled={uploading || mediaFiles.length === 0}
+//       >
+//         {uploading ? (
+//           <ActivityIndicator size="small" color="#fff" />
+//         ) : (
+//           <Text style={styles.buttonText}>Upload {mediaFiles.length} Files</Text>
+//         )}
+//       </TouchableOpacity>
+
+//       {uploadStatus ? <Text style={styles.status}>{uploadStatus}</Text> : null}
+//     </View>
+//   );
+// };
+
+// const styles = StyleSheet.create({
+//   container: {
+//     flex: 1,
+//     justifyContent: 'center',
+//     alignItems: 'center',
+//     padding: 20,
+//     backgroundColor: '#f5f5f5',
+//   },
+//   title: {
+//     fontSize: 28,
+//     fontWeight: 'bold',
+//     marginBottom: 20,
+//     color: '#333',
+//   },
+//   mediaPreview: {
+//     width: '100%',
+//     height: 200,
+//     justifyContent: 'center',
+//     alignItems: 'center',
+//     marginBottom: 20,
+//     borderRadius: 10,
+//     backgroundColor: '#ececec',
+//   },
+//   mediaImage: {
+//     width: 100,
+//     height: 100,
+//     borderRadius: 10,
+//     marginHorizontal: 5,
+//   },
+//   mediaText: {
+//     fontSize: 16,
+//     color: '#555',
+//   },
+//   button: {
+//     backgroundColor: '#2196f3',
+//     padding: 15,
+//     borderRadius: 10,
+//     width: '100%',
+//     alignItems: 'center',
+//     marginVertical: 10,
+//   },
+//   buttonText: {
+//     fontSize: 18,
+//     color: '#fff',
+//     fontWeight: 'bold',
+//   },
+//   switchContainer: {
+//     flexDirection: 'row',
+//     alignItems: 'center',
+//     marginBottom: 20,
+//   },
+//   switchText: {
+//     fontSize: 16,
+//     marginRight: 10,
+//   },
+//   warning: {
+//     fontSize: 12,
+//     color: '#ff5722',
+//     marginBottom: 10,
+//   },
+//   status: {
+//     marginTop: 10,
+//     fontSize: 16,
+//     color: '#333',
+//   },
+// });
+
+// export default UploadScreen;
+
+
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, FlatList } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
+import { Ionicons } from '@expo/vector-icons';
+import { styled } from 'nativewind';
+import axios from 'axios';
+import * as FileSystem from 'expo-file-system';
+
+const StyledView = styled(View);
+const StyledText = styled(Text);
+const StyledTouchableOpacity = styled(TouchableOpacity);
+
+// Mock data for events (folder names)
+const mockEvents = [
+  { id: '1', name: 'Birthday Party' },
+  { id: '2', name: 'Wedding' },
+  { id: '3', name: 'Graduation' },
+  { id: '4', name: 'Family Reunion' },
+];
+
+const UploadScreen = ({ navigation }) => {
+  const [selectedEvent, setSelectedEvent] = useState(null);
+
+  // Fetch upload server URL
+  const getUploadServerUrl = async () => {
+    try {
+      const response = await axios.get('https://upstream.to/api/upload/server', {
+        params: {
+          key: '65201ww4kc6ua01i6yxnh',
+        },
+      });
+      if (response.data && response.data.status === 200) {
+        return response.data.result;
+      } else {
+        console.error('Failed to get upload server URL', response.data);
+        return null;
+      }
+    } catch (error) {
+      console.error('Error fetching upload server URL', error);
+      return null;
+    }
+  };
+
+  // Pick and upload media files
+  const pickMedia = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.All,
+      allowsMultipleSelection: true,
+    });
+
+    if (!result.cancelled && result.assets.length > 0) {
+      const serverUrl = await getUploadServerUrl();
+      if (serverUrl) {
+        await uploadFiles(result.assets, serverUrl);
+      }
+    }
+  };
+
+  // Upload files to the server
+  const uploadFiles = async (files, serverUrl) => {
+    const formData = new FormData();
+
+    // Append API key to form data
+    formData.append('key', '65201ww4kc6ua01i6yxnh');
+
+    // Append each file to form data
+    for (const file of files) {
+      // Extract filename and mimetype from the file URI
+      const fileUri = file.uri;
+      const fileName = fileUri.split('/').pop();
+      const mimeType = file.type === 'image' ? 'image/jpeg' : 'video/mp4';
+      
+      // Use FileSystem to read file content as blob
+      const fileContent = await FileSystem.readAsStringAsync(fileUri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+
+      formData.append('file', {
+        uri: fileUri,
+        name: fileName,
+        type: mimeType,
+        data: fileContent,
+      });
+    }
+
+    try {
+      // Perform the POST request to upload the files
+      const response = await axios.post(serverUrl, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      if (response.data && response.data.status === 200) {
+        console.log('Files uploaded successfully:', response.data.files);
+        // Navigate to Files screen or show a success message
+        navigation.navigate('Files');
+      } else {
+        console.error('Failed to upload files', response.data);
+      }
+    } catch (error) {
+      console.error('Error uploading files', error);
+    }
+  };
+
+  return (
+    <StyledView className="flex-1 bg-[#131324] p-5">
+      <StyledText className="text-2xl font-bold text-white mb-5">Upload Media</StyledText>
+      <StyledView className="mb-5">
+        <StyledText className="text-base text-[#8f8fa8] mb-2">Select Event:</StyledText>
+        <FlatList
+          data={mockEvents}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <StyledTouchableOpacity
+              className={`bg-[#1e1e36] px-4 py-2 rounded-full mr-2 ${
+                selectedEvent?.id === item.id ? 'bg-[#3f3f68]' : ''
+              }`}
+              onPress={() => setSelectedEvent(item)}
+            >
+              <StyledText className="text-white text-sm">{item.name}</StyledText>
+            </StyledTouchableOpacity>
+          )}
+        />
+      </StyledView>
+      <StyledTouchableOpacity 
+        className="bg-[#3f3f68] flex-row items-center justify-center py-4 rounded-lg"
+        onPress={pickMedia}
+      >
+        <Ionicons name="cloud-upload" size={24} color="#fff" />
+        <StyledText className="text-white text-base font-bold ml-2">Pick and Upload Media</StyledText>
+      </StyledTouchableOpacity>
+    </StyledView>
+  );
+};
+
+export default UploadScreen;
+
+
+
+
+
+
+
+
+
+
+import React, { useState, useEffect, useContext } from 'react';
+import { View, Text, Image, ScrollView, TouchableOpacity, SafeAreaView, Dimensions, StyleSheet, TextInput, ActivityIndicator } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { FontAwesome, MaterialCommunityIcons } from '@expo/vector-icons';
+import { AuthContext } from '../context/AuthContext';
+import axios from 'axios';
+import { getCommentsRoute, addCommentRoute } from '../utils/APIRoutes';
+
+const { width: screenWidth } = Dimensions.get('window');
+
+const EventDetails = ({ route }) => {
+  const { user } = useContext(AuthContext);
+  const { event } = route.params;
+  const navigation = useNavigation();
+  const [comments, setComments] = useState([]);
+  const [newComment, setNewComment] = useState('');
+  const [imageHeight, setImageHeight] = useState(0);
+  const [isRegistered, setIsRegistered] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (event.image) {
+      Image.getSize(event.image, (width, height) => {
+        const imageWidth = screenWidth * 0.7;
+        const scaleFactor = imageWidth / width;
+        setImageHeight(height * scaleFactor);
+      }, (error) => {
+        console.error("Couldn't get the image size:", error);
+      });
+    }
+    setIsRegistered(event.registeredUsers.includes(user._id));
+    fetchComments();
+  }, [event.image, event.registeredUsers, user._id]);
+
+  const fetchComments = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await axios.get(`${getCommentsRoute}/${event._id}`);
+      console.log('API Response:', response.data); // Log the entire response
+      if (Array.isArray(response.data)) {
+        setComments(response.data);
+      } else if (response.data && Array.isArray(response.data.comments)) {
+        setComments(response.data.comments);
+      } else {
+        throw new Error('Unexpected response format');
+      }
+    } catch (error) {
+      console.error('Error fetching comments:', error);
+      setError('Failed to load comments. Please try again later.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleAddComment = async () => {
+    if (newComment.trim() === '') return;
+    setIsLoading(true);
+    setError(null);
+    try {
+      await axios.post(addCommentRoute, {
+        eventId: event._id,
+        userId: user._id,
+        text: newComment,
+      });
+      setNewComment('');
+      fetchComments();
+    } catch (error) {
+      console.error('Error adding comment:', error);
+      setError('Failed to add comment. Please try again.');
+      setIsLoading(false);
+    }
+  };
+
+  const renderComments = () => {
+    if (isLoading) {
+      return <ActivityIndicator size="large" color="#4a90e2" />;
+    }
+    if (error) {
+      return <Text style={styles.errorText}>{error}</Text>;
+    }
+    if (comments.length === 0) {
+      return <Text style={styles.noCommentsText}>No comments yet. Be the first to comment!</Text>;
+    }
+    return comments.map((item) => (
+      <View key={item._id} style={styles.commentItem}>
+        <Text style={styles.commentUser}>{item.userId?.username || 'Anonymous'}</Text>
+        <Text style={styles.commentText}>{item.text}</Text>
+      </View>
+    ));
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <ScrollView>
+        <Image 
+          source={{ uri: event.image }}
+          style={styles.blurredBackground}
+          blurRadius={10}
+        />
+        <View style={styles.imageWrapper}>
+          <View style={[styles.imageContainer, { height: imageHeight + 120 }]}>
+            <Image 
+              source={{ uri: event.image }} 
+              style={styles.eventImage} 
+              resizeMode="cover" 
+            />
+          </View>
+        </View>
+
+        <View style={styles.contentContainer}>
+          <Text style={styles.eventTitle}>{event.title}</Text>
+          <View style={styles.eventMetaContainer}>
+            <View style={styles.eventMetaItem}>
+              <MaterialCommunityIcons name="map-marker" size={20} color="#4a90e2" />
+              <Text style={styles.eventMetaText}>{event.location}</Text>
+            </View>
+            <View style={styles.eventMetaItem}>
+              <MaterialCommunityIcons name="calendar" size={20} color="#4a90e2" />
+              <Text style={styles.eventMetaText}>{new Date(event.date).toLocaleDateString()}</Text>
+            </View>
+          </View>
+
+          <Text style={styles.sectionTitle}>About the Event</Text>
+          <Text style={styles.descriptionText}>{event.description}</Text>
+
+          {isRegistered ? (
+            <TouchableOpacity
+              style={styles.forumButton}
+              onPress={() => navigation.navigate('Forums', {eventId: event._id})}
+            >
+              <MaterialCommunityIcons name="forum-outline" size={20} color="#fff" />
+              <Text style={styles.forumButtonText}>Join the Discussion</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={styles.registerButton}
+              onPress={() => {
+                setIsRegistered(true);
+                // You might want to add an API call here to update the server
+              }}
+            >
+              <Text style={styles.registerButtonText}>Register for the Event</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        <View style={styles.commentsContainer}>
+          <Text style={styles.sectionTitle}>Comments</Text>
+          <View style={styles.commentInputContainer}>
+            <TextInput
+              style={styles.commentInput}
+              placeholder="Add a comment..."
+              placeholderTextColor="#a0a0b0"
+              value={newComment}
+              onChangeText={setNewComment}
+            />
+            <TouchableOpacity style={styles.postButton} onPress={handleAddComment} disabled={isLoading}>
+              <Text style={styles.postButtonText}>Post</Text>
+            </TouchableOpacity>
+          </View>
+          {renderComments()}
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#131324',
+  },
+  errorText: {
+    color: 'red',
+    textAlign: 'center',
+    marginTop: 10,
+  },
+  noCommentsText: {
+    color: '#a0a0b0',
+    textAlign: 'center',
+    marginTop: 10,
+  },
+  imageWrapper: {
+    width: '100%',
+    alignItems: 'center',
+  },
+  imageContainer: {
+    width: '90%',
+    overflow: 'hidden',
+    borderRadius: 10,
+  },
+  eventImage: {
+    width: '100%',
+    height: '90%',
+  },
+  contentContainer: {
+    padding: 20,
+    backgroundColor: '#1f1f3c',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    marginTop: -30,
+  },
+  eventTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 10,
+  },
+  eventMetaContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 15,
+  },
+  eventMetaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  eventMetaText: {
+    fontSize: 16,
+    color: '#a0a0b0',
+    marginLeft: 5,
+  },
+  sectionTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 10,
+    marginTop: 20,
+  },
+  descriptionText: {
+    fontSize: 16,
+    color: '#a0a0b0',
+    lineHeight: 24,
+    marginBottom: 20,
+  },
+  forumButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#4a90e2',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 25,
+    alignSelf: 'center',
+    marginBottom: 20,
+  },
+  forumButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    marginLeft: 10,
+  },
+  registerButton: {
+    backgroundColor: '#4a90e2',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 25,
+    alignSelf: 'center',
+    marginBottom: 20,
+  },
+  registerButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    textAlign: 'center',
+  },
+  commentsContainer: {
+    padding: 20,
+    backgroundColor: '#1f1f3c',
+  },
+  commentInputContainer: {
+    flexDirection: 'row',
+    marginBottom: 15,
+  },
+  commentInput: {
+    flex: 1,
+    backgroundColor: '#2a2a4c',
+    borderRadius: 20,
+    padding: 10,
+    color: '#fff',
+    marginRight: 10,
+  },
+  postButton: {
+    backgroundColor: '#4a90e2',
+    borderRadius: 20,
+    paddingHorizontal: 15,
+    justifyContent: 'center',
+  },
+  postButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  commentItem: {
+    backgroundColor: '#2a2a4c',
+    borderRadius: 15,
+    padding: 15,
+    marginBottom: 10,
+  },
+  commentUser: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 5,
+  },
+  commentText: {
+    fontSize: 14,
+    color: '#a0a0b0',
+  },
+  blurredBackground: {
+    ...StyleSheet.absoluteFillObject,
+    width: '100%',
+    height: '100%',
+    opacity: 0.5,
+  },
+});
+
+export default EventDetails;
+
+
+
+
+
+
+
+
+
+import React, { useState, useEffect, useContext } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  TextInput,
+  SafeAreaView,
+  StatusBar,
+  KeyboardAvoidingView,
+  Platform,
+  Image,
+  Alert,
+  ActivityIndicator,
+} from 'react-native';
+import { AuthContext } from '../context/AuthContext';
+import { getForumPostsRoute, addForumPostRoute, upvotePostRoute, downvotePostRoute, deletePostRoute } from '../utils/APIRoutes';
+import axios from 'axios';
+import { FontAwesome } from '@expo/vector-icons';
+import { SvgXml } from 'react-native-svg';
+
+const ThreadScreen = ({ route }) => {
+  const { threadId } = route.params;
+  const { user, token } = useContext(AuthContext);
+  const [thread, setThread] = useState(null);
+  const [posts, setPosts] = useState([]);
+  const [newPostContent, setNewPostContent] = useState('');
+  const [replyingTo, setReplyingTo] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    fetchThreadAndPosts();
+  }, []);
+
+  const fetchThreadAndPosts = async () => {
+    try {
+      const response = await axios.get(`${getForumPostsRoute}/${threadId}`, {
+        headers: { 'Authorization': `Bearer ${token}`}
+      });
+      setThread(response.data.thread);
+      setPosts(response.data.thread.posts);
+    } catch (error) {
+      console.error('Error fetching thread and posts:', error);
+      Alert.alert('Error', 'Failed to load thread and posts. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleNewPost = async () => {
+    if (newPostContent.trim() && user && token) {
+      try {
+        const response = await axios.post(addForumPostRoute, {
+          content: newPostContent,
+          threadId: threadId,
+          userId: user._id,
+          parentId: replyingTo
+        }, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        if (response.data && response.data.post) {
+          if (replyingTo) {
+            setPosts(posts.map(post => 
+              post._id === replyingTo 
+                ? { ...post, replies: [...(post.replies || []), response.data.post] }
+                : post
+            ));
+          } else {
+            setPosts([response.data.post, ...posts]);
+          }
+          setNewPostContent('');
+          setReplyingTo(null);
+        } else {
+          console.error('Invalid response data:', response.data);
+        }
+      } catch (error) {
+        console.error('Error creating new post:', error);
+        Alert.alert('Error', 'Failed to create new post. Please try again.');
+      }
+    } else {
+      console.error('Missing required data for creating post');
+    }
+  };
+
+  const handleVote = async (postId, isUpvote) => {
+    try {
+      const route = isUpvote ? upvotePostRoute : downvotePostRoute;
+      const response = await axios.patch(route(postId, user._id), {}, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      setPosts(posts.map(post => 
+        post._id === postId ? { ...post, upvotes: response.data.upvotes } : post
+      ));
+    } catch (error) {
+      console.error('Error voting:', error.response);
+      Alert.alert('Error', 'Failed to register vote. Please try again.');
+    }
+  };
+
+  const handleDelete = async (postId) => {
+    Alert.alert(
+      "Delete Post",
+      "Are you sure you want to delete this post?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel"
+        },
+        { 
+          text: "OK", 
+          onPress: async () => {
+            try {
+              await axios.delete(deletePostRoute(postId, user._id), {
+                headers: { 'Authorization': `Bearer ${token}` }
+              });
+              setPosts(posts.filter(post => post._id !== postId));
+              fetchThreadAndPosts();
+            } catch (error) {
+              console.error('Error deleting post:', error);
+              Alert.alert('Error', 'Failed to delete post. Please try again.');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const renderReply = ({ item, depth = 1 }) => (
+    <View style={[styles.replyContainer, { marginLeft: depth * 5 }]}>
+      <View style={styles.replyBorder} />
+      <View style={styles.postContent}>
+        <View style={styles.postHeader}>
+          <View style={styles.avatar}>
+            <SvgXml
+              xml={atob(item.user.avatarImage)}
+              width="50"
+              height="50"
+            />
+          </View>
+          <Text style={styles.postUser}>{item.user.username}</Text>
+        </View>
+        <Text style={styles.postText}>{item.content}</Text>
+        <View style={styles.voteContainer}>
+          <TouchableOpacity onPress={() => handleVote(item._id, true)}>
+            <FontAwesome name="thumbs-up" size={16} color="#4a90e2" />
+          </TouchableOpacity>
+          <Text style={styles.voteCount}>{item.upvotes}</Text>
+          <TouchableOpacity onPress={() => handleVote(item._id, false)}>
+            <FontAwesome name="thumbs-down" size={16} color="#e24a4a" />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.postFooter}>
+          <TouchableOpacity
+            style={styles.replyButton}
+            onPress={() => handleReply(item._id)}
+          >
+            <Text style={styles.replyButtonText}>Reply</Text>
+          </TouchableOpacity>
+          {user._id === item.user._id && (
+            <TouchableOpacity
+              style={styles.deleteButton}
+              onPress={() => handleDelete(item._id)}
+            >
+              <FontAwesome name="trash" size={16} color="#e24a4a" />
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+    </View>
+  );
+
+  const renderPost = ({ item }) => (
+    <View style={styles.postContainer}>
+      <View style={styles.postContent}>
+        <View style={styles.postHeader}>
+          <View style={styles.avatar}>
+            <SvgXml
+              xml={atob(item.user.avatarImage)}
+              width="50"
+              height="50"
+            />
+          </View>
+          <Text style={styles.postUser}>{item.user.username}</Text>
+        </View>
+        <Text style={styles.postText}>{item.content}</Text>
+        <View style={styles.voteContainer}>
+          <TouchableOpacity onPress={() => handleVote(item._id, true)}>
+            <FontAwesome name="thumbs-up" size={20} color="#4a90e2" />
+          </TouchableOpacity>
+          <Text style={styles.voteCount}>{item.upvotes}</Text>
+          <TouchableOpacity onPress={() => handleVote(item._id, false)}>
+            <FontAwesome name="thumbs-down" size={20} color="#e24a4a" />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.postFooter}>
+          <TouchableOpacity
+            style={styles.replyButton}
+            onPress={() => handleReply(item._id)}
+          >
+            <Text style={styles.replyButtonText}>Reply</Text>
+          </TouchableOpacity>
+          {user._id === item.user._id && (
+            <TouchableOpacity
+              style={styles.deleteButton}
+              onPress={() => handleDelete(item._id)}
+            >
+              <FontAwesome name="trash" size={20} color="#e24a4a" />
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+      {item.replies && item.replies.length > 0 && (
+        <View style={styles.repliesContainer}>
+          {item.replies.map((reply, index) => renderReply({ item: reply, depth: 1 }))}
+          {item.replies.length > 2 && (
+            <TouchableOpacity style={styles.seeMoreReplies}>
+              <Text style={styles.seeMoreRepliesText}>
+                See {item.replies.length - 2} more replies
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+    </View>
+  );
+
+
+
+
+// import React, { useContext, useState } from 'react';
+// import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+// import { AuthContext } from '../context/AuthContext';
+// // import { loginRoute } from '../utils/APIRoutes';
+// // import axios from 'axios';
+
+// // Mock API functions for login and registration
+// const mockApiCall = async (endpoint, data) => {
+//   return new Promise((resolve, reject) => {
+//     setTimeout(() => {
+//       if (endpoint === 'login' && data.username === 'test' && data.password === '1234') {
+//         resolve({
+//           user: { name: 'Mock User' },
+//           token: 'mock-access-token-12345',
+//         });
+//       } else if (endpoint === 'register') {
+//         resolve({ message: 'Registration successful' });
+//       } else {
+//         reject(new Error('Invalid credentials'));
+//       }
+//     }, 1500);
+//   });
+// };
+
+// const LoginScreen = () => {
+//   const { login } = useContext(AuthContext);
+//   const [isRegistering, setIsRegistering] = useState(false);
+//   const [username, setUsername] = useState('');
+//   const [password, setPassword] = useState('');
+//   const [loading, setLoading] = useState(false);
+
+//   const handleLogin = async () => {
+//     if (!username || !password) {
+//       Alert.alert('Error', 'Please enter both username and password.');
+//       return;
+//     }
+
+//     setLoading(true);
+//     try {
+//       // Comment out the actual API call
+//       // const response = await axios.post(loginRoute, {
+//       //   username: username,
+//       //   password: password
+//       // })
+
+//       // Use the mock API call instead
+//       const response = await mockApiCall('login', { username, password });
+
+//       console.log(response)
+//       login(response.user, response.token);
+//     } catch (error) {
+//       Alert.alert('Login Failed', error.message);
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
+
+//   const handleRegister = async () => {
+//     if (!username || !password) {
+//       Alert.alert('Error', 'Please fill in all fields.');
+//       return;
+//     }
+
+//     setLoading(true);
+//     try {
+//       const response = await mockApiCall('register', { username, password });
+//       Alert.alert('Success', response.message);
+//       setIsRegistering(false); // Switch back to login after successful registration
+//     } catch (error) {
+//       Alert.alert('Registration Failed', error.message);
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
+
+//   return (
+//     <View style={styles.container}>
+//       <Text style={styles.title}>{isRegistering ? 'Register' : 'Login'}</Text>
+      
+//       <TextInput
+//         style={styles.input}
+//         placeholder="Username"
+//         value={username}
+//         onChangeText={setUsername}
+//       />
+//       <TextInput
+//         style={styles.input}
+//         placeholder="Password"
+//         value={password}
+//         onChangeText={setPassword}
+//         secureTextEntry
+//       />
+      
+//       {loading ? (
+//         <ActivityIndicator size="large" color="#007bff" />
+//       ) : (
+//         <TouchableOpacity
+//           style={styles.button}
+//           onPress={isRegistering ? handleRegister : handleLogin}
+//         >
+//           <Text style={styles.buttonText}>{isRegistering ? 'Register' : 'Login'}</Text>
+//         </TouchableOpacity>
+//       )}
+      
+//       <TouchableOpacity
+//         onPress={() => setIsRegistering(!isRegistering)}
+//         style={styles.switchButton}
+//       >
+//         <Text style={styles.switchText}>
+//           {isRegistering ? 'Already have an account? Login' : "Don't have an account? Register"}
+//         </Text>
+//       </TouchableOpacity>
+//     </View>
+//   );
+// };
+
+// const styles = StyleSheet.create({
+//   container: {
+//     flex: 1,
+//     justifyContent: 'center',
+//     alignItems: 'center',
+//     padding: 16,
+//     backgroundColor: '#f0f0f0',
+//   },
+//   title: {
+//     fontSize: 24,
+//     fontWeight: 'bold',
+//     marginBottom: 20,
+//   },
+//   input: {
+//     width: '100%',
+//     padding: 12,
+//     marginBottom: 10,
+//     borderWidth: 1,
+//     borderColor: '#ccc',
+//     borderRadius: 8,
+//     backgroundColor: '#fff',
+//   },
+//   button: {
+//     backgroundColor: '#007bff',
+//     padding: 12,
+//     borderRadius: 8,
+//     width: '100%',
+//     alignItems: 'center',
+//   },
+//   buttonText: {
+//     color: '#fff',
+//     fontSize: 16,
+//     fontWeight: 'bold',
+//   },
+//   switchButton: {
+//     marginTop: 20,
+//   },
+//   switchText: {
+//     color: '#007bff',
+//     textDecorationLine: 'underline',
+//   },
+// });
+
+// export default LoginScreen;
+
+
+import React, { useRef, useState } from 'react';
+import { View, FlatList, Image, TouchableOpacity, StyleSheet, Dimensions, SafeAreaView } from 'react-native';
+import { Video } from 'expo-av';
+import { FontAwesome } from '@expo/vector-icons'; // For play icon and action icons
+import * as Sharing from 'expo-sharing'; // For sharing functionality
+
+const { width } = Dimensions.get('window');
+
+const MediaLibrary = ({ route }) => {
+  const { allMedia } = route.params;
+  const mediaRef = useRef(null);
+  const thumbnailRef = useRef(null);
+  const [selectedMediaIndex, setSelectedMediaIndex] = useState(0);
+  const videoRefs = useRef([]);
+
+  const onViewableItemsChanged = ({ viewableItems }) => {
+    if (viewableItems.length > 0) {
+      const index = viewableItems[0].index;
+      setSelectedMediaIndex(index);
+
+      // Scroll the thumbnail list to center the current thumbnail
+      // thumbnailRef.current.scrollToIndex({
+      //   index,
+      //   animated: true,
+      //   viewPosition: 0.5,
+      // });
+
+      // Pause videos not in view and autoplay the one in view
+      videoRefs.current.forEach((video, i) => {
+        if (i !== index && video) video.pauseAsync();
+        if (i === index && video) video.playAsync();
+      });
+    }
+  };
+
+  const viewabilityConfig = { itemVisiblePercentThreshold: 50 };
+
+  const handleThumbnailPress = (index) => {
+    mediaRef.current.scrollToIndex({
+      index,
+      animated: true,
+    });
+  };
+
+  const shareMedia = async (uri) => {
+    if (await Sharing.isAvailableAsync()) {
+      await Sharing.shareAsync(uri);
+    } else {
+      alert('Sharing is not available on this platform');
+    }
+  };
+
+  const deleteMedia = (index) => {
+    // Your delete logic here (e.g., update state or call API)
+    alert(`Delete media at index ${index}`);
+  };
+
+  const saveMedia = (uri) => {
+    // Your save logic here (e.g., download or move file)
+    alert(`Save media: ${uri}`);
+  };
+
+  const getItemLayout = (data, index) => ({
+    length: 70, // Approximate thumbnail size + margin
+    offset: 70 * index,
+    index,
+  });
+
+  return (
+    <SafeAreaView style={styles.container}>
+      {/* Media FlatList */}
+      <FlatList
+        ref={mediaRef}
+        data={allMedia}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        style={{borderRadius: 8}}
+        onViewableItemsChanged={onViewableItemsChanged}
+        viewabilityConfig={viewabilityConfig}
+        keyExtractor={(_, index) => index.toString()}
+        renderItem={({ item, index }) => (
+          <View style={styles.mediaContainer}>
+            {item.type === 'video' ? (
+              <Video
+                ref={(ref) => (videoRefs.current[index] = ref)}
+                source={{ uri: item.uri }}
+                style={styles.media}
+                resizeMode="contain"
+                shouldPlay={index === selectedMediaIndex} // Autoplay video if it is in view
+                isLooping
+              />
+            ) : (
+              <Image source={{ uri: item.uri }} style={styles.media} />
+            )}
+            <View style={styles.actionsContainer}>
+              <TouchableOpacity onPress={() => shareMedia(item.uri)}>
+                <FontAwesome name="share-alt" size={24} color="#ffffff" />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => saveMedia(item.uri)}>
+                <FontAwesome name="save" size={24} color="#ffffff" />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => deleteMedia(index)}>
+                <FontAwesome name="trash" size={24} color="#ff4444" />
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+      />
+
+      {/* Thumbnails FlatList (Smaller versions of the media) */}
+      {/* <FlatList
+        ref={thumbnailRef}
+        data={allMedia}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.thumbnailList}
+        keyExtractor={(_, index) => index.toString()}
+        renderItem={({ item, index }) => (
+          <TouchableOpacity onPress={() => handleThumbnailPress(index)}>
+            <View>
+              {item.type === 'video' ? (
+                <Video
+                  source={{ uri: item.uri }}
+                  style={[
+                    styles.thumbnail,
+                    index === selectedMediaIndex ? styles.selectedThumbnail : null,
+                  ]}
+                  resizeMode="cover"
+                  shouldPlay={false} // Thumbnails don't autoplay
+                />
+              ) : (
+                <Image
+                  source={{ uri: item.uri }}
+                  style={[
+                    styles.thumbnail,
+                    index === selectedMediaIndex ? styles.selectedThumbnail : null,
+                  ]}
+                />
+              )}
+              {item.type === 'video' && (
+                <FontAwesome name="play-circle" size={24} color="white" style={styles.playIcon} />
+              )}
+            </View>
+          </TouchableOpacity>
+        )}
+        getItemLayout={getItemLayout}
+        onScrollToIndexFailed={(info) => {
+          const wait = new Promise((resolve) => setTimeout(resolve, 500));
+          wait.then(() => {
+            thumbnailRef.current.scrollToIndex({
+              index: info.index,
+              animated: true,
+            });
+          });
+        }}
+      /> */}
+    </SafeAreaView>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#131324',
+  },
+  mediaContainer: {
+    width: width,
+    padding: 10,
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  media: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'contain',
+  },
+  actionsContainer: {
+    position: 'absolute',
+    top: 60,
+    right: 5,
+    backgroundcolor: 'rgba(0,0,0,0.5)',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  thumbnailList: {
+    position: 'absolute',
+    bottom: 20,
+  },
+  thumbnail: {
+    width: 60,
+    height: 60,
+    marginHorizontal: 5,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#1e1e36',
+  },
+  selectedThumbnail: {
+    borderColor: '#ffffff',
+  },
+  playIcon: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    transform: [{ translateX: -12 }, { translateY: -12 }],
+  },
+});
+
+export default MediaLibrary;
